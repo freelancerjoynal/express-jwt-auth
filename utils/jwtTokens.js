@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 
 const createToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "10m" });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1m" });
 };
 
 
@@ -17,9 +17,15 @@ const refreshToken = (id, clientIP) => {
 }
 
 
-const verifyRefreshToken = (authHeader, clientIP) => {
-  const RefreshToken = authHeader.split(" ")[1];
-  return jwt.verify(RefreshToken, process.env.JWT_REFRESH_SECRET);
-}
+const verifyRefreshToken = (refreshTokenCookie, clientIP) => {
+
+    const decoded = jwt.verify(refreshTokenCookie, process.env.JWT_REFRESH_SECRET);
+    
+    if (decoded.clientIP !== clientIP) {
+        throw new Error("Invalid refresh token - IP mismatch");
+    }
+    
+    return decoded;
+};
 
 export { createToken, refreshToken, verifyToken, verifyRefreshToken };

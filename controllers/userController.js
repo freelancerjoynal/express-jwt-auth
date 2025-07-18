@@ -3,14 +3,12 @@ import validator from "validator";
 import bycrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import { createToken, refreshToken } from "../utils/jwtTokens.js";
+import { createToken, refreshToken, verifyRefreshToken } from "../utils/jwtTokens.js";
 import {
   setAccessCookie,
   setRefreshCookie,
   clearAuthCookies,
 } from "../utils/cookies.js";
-
-
 
 const userRegister = async (req, res) => {
   try {
@@ -47,14 +45,11 @@ const userRegister = async (req, res) => {
     setAccessCookie(res, token);
     setRefreshCookie(res, refresh);
 
-    res.json({ success: true, message: "User registered sucessfully"});
+    res.json({ success: true, message: "User registered sucessfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
-
 
 const userLogin = async (req, res) => {
   try {
@@ -77,7 +72,7 @@ const userLogin = async (req, res) => {
     // Generate JWT token
     const token = createToken(exists._id);
     const clientIP = req.clientIp;
-    
+
     const refresh = refreshToken(exists._id, clientIP);
     exists.refreshToken = refresh;
     await exists.save();
@@ -115,4 +110,36 @@ const userData = async (req, res) => {
   }
 };
 
-export { userRegister, userLogin, userData };
+const refreshTokenValidate = async (req, res) => {
+
+
+  try {
+    const refreshTokenCookie = req.cookies.refreshToken;
+    if (!refreshTokenCookie) {
+      return res.status(401).json({
+        success: false,
+        message: "No refresh token found",
+      });
+    }
+
+    const refreshTokenVerify = verifyRefreshToken(refreshTokenCookie, req.clientIp);
+    const token = createToken(refreshTokenVerify.id);
+    setAccessCookie(res, token); 
+    // setRefreshCookie(res, refresh);
+    res.json({
+      success: true,
+      message: "Refresh token verified",
+      token,
+    });
+    
+
+
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+export { userRegister, userLogin, refreshTokenValidate, userData };
