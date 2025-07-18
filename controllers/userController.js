@@ -16,13 +16,13 @@ const userRegister = async (req, res) => {
 
     //Checking if user already exists
     const exists = await userModel.findOne({ email });
-    if (exists) res.json({ success: false, message: "User already exits" });
+    if (exists) return res.json({ success: false, message: "User already exits" });
 
     // Validating email and password
     if (!validator.isEmail(email))
-      res.json({ success: false, message: "Please enter a valid email" });
+      return res.json({ success: false, message: "Please enter a valid email" });
     if (password.length < 8)
-      res.json({ success: false, message: "Please choose a strong password" });
+      return res.json({ success: false, message: "Please choose a strong password" });
 
     // Hashing password before store
     const salt = await bycrypt.genSalt(10);
@@ -82,9 +82,11 @@ const userLogin = async (req, res) => {
     res.json({
       success: true,
       message: "Login successful",
-      data: exists,
-      token,
-      clientIP,
+      data: {
+        _id: exists._id,
+        name: exists.name,
+        email: exists.email,
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
