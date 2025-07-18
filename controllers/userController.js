@@ -4,6 +4,12 @@ import bycrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 import { createToken, refreshToken } from "../utils/jwtTokens.js";
+import {
+  setAccessCookie,
+  setRefreshCookie,
+  clearAuthCookies,
+} from "../utils/cookies.js";
+
 
 
 const userRegister = async (req, res) => {
@@ -38,8 +44,10 @@ const userRegister = async (req, res) => {
 
     // res.json({ success: true, message: "User registered sucessfully" })
     const token = createToken(user._id);
+    setAccessCookie(res, token);
+    setRefreshCookie(res, refresh);
 
-    res.json({ success: true, message: "User registered sucessfully", token, refresh });
+    res.json({ success: true, message: "User registered sucessfully"});
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
