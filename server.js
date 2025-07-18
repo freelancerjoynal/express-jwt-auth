@@ -2,12 +2,18 @@ import express from 'express'
 import connectDB from './config/connectDB.js'
 import 'dotenv/config'
 import userRouter from './routes/UserRouter.js'
+import requestIp from "request-ip"
 
 
 const app = express()
 connectDB()
 
 app.use(express.json())
+
+
+// Get client ip
+app.use(requestIp.mw())
+
 
 //API Routes
 app.use('/api/user', userRouter);

@@ -3,12 +3,12 @@ import validator from "validator";
 import bycrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+import { createToken } from "../utils/jwtTokens.js";
+
 const userRegister = async (req, res) => {
 
 
-    const createToken = (id) =>{
-        return jwt.sign({id}, process.env.JWT_SECRET);
-    }
+    
 
     try {
         const { name, email, password } = req.body;
@@ -63,9 +63,11 @@ const userLogin = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: exists._id }, process.env.JWT_SECRET);
+        const token = createToken(exists._id);
+        const clientIP = req.clientIp;
 
-        res.json({ success: true, message: "Login successful", exists, token });
+        res.json({ success: true, message: "Login successful", data: exists, token, clientIP });
+
 
 
     }catch(error){
@@ -73,5 +75,11 @@ const userLogin = async (req, res) => {
     }
 }
 
+const userData = async (req, res) => {
+    res.json({
+        success: true,
+        message: "Here is your user data"
+    })
+}
 
-export { userRegister, userLogin }
+export { userRegister, userLogin, userData }
