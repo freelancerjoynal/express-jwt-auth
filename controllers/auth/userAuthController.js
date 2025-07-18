@@ -81,8 +81,7 @@ const userLogin = async (req, res) => {
     const refresh = refreshToken(exists._id, clientIP);
     exists.refreshToken = refresh;
     await exists.save();
-    setAccessCookie(res, token);
-    setRefreshCookie(res, refresh);
+
 
     res.json({
       success: true,
@@ -91,7 +90,9 @@ const userLogin = async (req, res) => {
         _id: exists._id,
         name: exists.name,
         email: exists.email,
-      }
+      },
+      accessToken: token,
+      refreshToken: refresh,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
