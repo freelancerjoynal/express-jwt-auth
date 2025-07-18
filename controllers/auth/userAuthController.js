@@ -3,7 +3,11 @@ import validator from "validator";
 import bycrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import { createToken, refreshToken, verifyRefreshToken } from "../../utils/jwtTokens.js";
+import {
+  createToken,
+  refreshToken,
+  verifyRefreshToken,
+} from "../../utils/jwtTokens.js";
 import {
   setAccessCookie,
   setRefreshCookie,
@@ -16,13 +20,20 @@ const userRegister = async (req, res) => {
 
     //Checking if user already exists
     const exists = await userModel.findOne({ email });
-    if (exists) return res.json({ success: false, message: "User already exits" });
+    if (exists)
+      return res.json({ success: false, message: "User already exits" });
 
     // Validating email and password
     if (!validator.isEmail(email))
-      return res.json({ success: false, message: "Please enter a valid email" });
+      return res.json({
+        success: false,
+        message: "Please enter a valid email",
+      });
     if (password.length < 8)
-      return res.json({ success: false, message: "Please choose a strong password" });
+      return res.json({
+        success: false,
+        message: "Please choose a strong password",
+      });
 
     // Hashing password before store
     const salt = await bycrypt.genSalt(10);
@@ -43,14 +54,12 @@ const userRegister = async (req, res) => {
     // res.json({ success: true, message: "User registered sucessfully" })
     const token = createToken(user._id);
 
-
     res.json({
-      success: true, 
+      success: true,
       message: "User registered sucessfully",
       accessToken: token,
       refreshToken: refresh,
-
-     });
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -82,7 +91,6 @@ const userLogin = async (req, res) => {
     exists.refreshToken = refresh;
     await exists.save();
 
-
     res.json({
       success: true,
       message: "Login successful",
@@ -99,9 +107,57 @@ const userLogin = async (req, res) => {
   }
 };
 
-
-
 const refreshTokenValidate = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const oldRefreshToken = authHeader && authHeader.split(" ")[1]; // Renamed to oldRefreshToken
+
+
+    const clientIP = req.clientIp;
+    const refreshTokenVerify = verifyRefreshToken(oldRefreshToken, clientIP);
+    if (!refreshTokenVerify) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const user = await userModel.findById(refreshTokenVerify.id);
+
+    if(!user){
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+    if(user.refreshToken !== oldRefreshToken){
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+    
+  
+    
+    const newAccessToken = createToken(refreshTokenVerify.id);
+
+    res.json({
+      success: true,
+      message: "Refresh token was valid, new access token was generated",
+      accessToken:newAccessToken,
+      user
+    })
+
+
+  } catch (error) {
+    return res.status(401).json({
+      success: false, 
+      message: error.message || "Invalid refresh token"
+    });
+  }
+};
+
+const userLogout = async (req, res) => {
   try {
     const refreshTokenCookie = req.cookies.refreshToken;
     if (!refreshTokenCookie) {
@@ -110,77 +166,28 @@ const refreshTokenValidate = async (req, res) => {
         message: "No refresh token found",
       });
     }
-
     const clientIP = req.clientIp;
     const refreshTokenVerify = verifyRefreshToken(refreshTokenCookie, clientIP);
-    
-    // Find the user with this refresh token
-    const user = await userModel.findOne({ 
-      _id: refreshTokenVerify.id, 
-      refreshToken: refreshTokenCookie 
-    });
-    
-    if (!user) {
+    if (!refreshTokenVerify) {
       return res.status(401).json({
         success: false,
-        message: "Token not found or user doesn't exist",
+        message: "Invalid refresh token",
       });
     }
-    
-    // Generate new tokens
-    const token = createToken(refreshTokenVerify.id);
-    const newRefreshToken = refreshToken(refreshTokenVerify.id, clientIP);
-    
-    // Update refresh token in database
-    user.refreshToken = newRefreshToken;
-    await user.save();
-    
-    // Set new cookies
-    setAccessCookie(res, token);
-    setRefreshCookie(res, newRefreshToken);
-    
+    // Find user by refresh token and clear it
+    await userModel.updateOne(
+      { refreshToken: refreshTokenCookie },
+      { refreshToken: "null" }
+    );
+    clearAuthCookies(res);
     res.json({
       success: true,
-      message: "Refresh token verified",
+      message: "Logout successful",
     });
   } catch (error) {
-    res.status(401).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
-
-const userLogout =  async(req, res) => {
-    try{
-      const refreshTokenCookie = req.cookies.refreshToken;
-      if (!refreshTokenCookie) {
-        return res.status(401).json({
-          success: false,
-          message: "No refresh token found",
-        });
-      }
-      const clientIP = req.clientIp;
-      const refreshTokenVerify = verifyRefreshToken(refreshTokenCookie, clientIP);
-      if (!refreshTokenVerify) {
-        return res.status(401).json({
-          success: false,
-          message: "Invalid refresh token",
-        });
-      }
-      // Find user by refresh token and clear it
-      await userModel.updateOne(
-        { refreshToken: refreshTokenCookie },
-        { refreshToken: 'null' }
-      );
-      clearAuthCookies(res);
-      res.json({
-        success: true,
-        message: "Logout successful",
-      });
-    }catch(error){
-      res.status(500).json({ success: false, message: error.message });
-    }
-}
 
 // Update the export statement
 export { userRegister, userLogin, refreshTokenValidate, userLogout };
