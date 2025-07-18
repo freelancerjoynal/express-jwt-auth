@@ -1,9 +1,11 @@
 import express from 'express'
 import connectDB from './config/connectDB.js'
 import 'dotenv/config'
-import userRouter from './routes/UserRouter.js'
+import userAuthRouter from './routes/auth/userAuth.Router.js'
+
 import cookieParser from 'cookie-parser'
 import requestIp from "request-ip"
+import userRoutes from './routes/user/userRoutes.js'
 
 
 const app = express()
@@ -16,7 +18,8 @@ app.use(requestIp.mw())
 
 
 //API Routes
-app.use('/api/user', userRouter);
+app.use('/api', userAuthRouter);
+app.use('/api/user', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World')

@@ -144,49 +144,37 @@ const refreshTokenValidate = async (req, res) => {
 
 
 
-const userLogout = async (req, res) => {
-  try {
-    const refreshTokenCookie = req.cookies.refreshToken;
-    
-    // If there's a refresh token, find the user and clear their token
-    if (refreshTokenCookie) {
+const userLogout =  async(req, res) => {
+    try{
+      const refreshTokenCookie = req.cookies.refreshToken;
+      if (!refreshTokenCookie) {
+        return res.status(401).json({
+          success: false,
+          message: "No refresh token found",
+        });
+      }
+      const clientIP = req.clientIp;
+      const refreshTokenVerify = verifyRefreshToken(refreshTokenCookie, clientIP);
+      if (!refreshTokenVerify) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid refresh token",
+        });
+      }
       // Find user by refresh token and clear it
       await userModel.updateOne(
         { refreshToken: refreshTokenCookie },
         { refreshToken: 'null' }
       );
+      clearAuthCookies(res);
+      res.json({
+        success: true,
+        message: "Logout successful",
+      });
+    }catch(error){
+      res.status(500).json({ success: false, message: error.message });
     }
-    
-    // Clear cookies
-    clearAuthCookies(res);
-    
-    res.json({
-      success: true,
-      message: "Logged out successfully"
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const userData = async (req, res) => {
-  try {
-    const tokenuser = res.locals.tokenuser;
-    const userData = await userModel.findById(tokenuser.id);
-
-    if (!userData) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-    res.json({
-      success: true,
-      data: { _id: userData._id, name: userData.name, email: userData.email },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+}
 
 // Update the export statement
-export { userRegister, userLogin, refreshTokenValidate };
+export { userRegister, userLogin, refreshTokenValidate, userLogout };
