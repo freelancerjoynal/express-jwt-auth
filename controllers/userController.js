@@ -3,7 +3,8 @@ import validator from "validator";
 import bycrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import { createToken } from "../utils/jwtTokens.js";
+import { createToken, refreshToken } from "../utils/jwtTokens.js";
+
 
 const userRegister = async (req, res) => {
   try {
@@ -23,21 +24,29 @@ const userRegister = async (req, res) => {
     const salt = await bycrypt.genSalt(10);
     const hashedPassword = await bycrypt.hash(password, salt);
 
+    const clientIP = req.clientIp;
+
     const newUser = new userModel({
       name,
       email,
       password: hashedPassword,
     });
     const user = await newUser.save();
+    const refresh = refreshToken(user._id, clientIP);
+    user.refreshToken = refresh;
+    await user.save();
 
     // res.json({ success: true, message: "User registered sucessfully" })
     const token = createToken(user._id);
 
-    res.json({ success: true, message: "User registered sucessfully", token });
+    res.json({ success: true, message: "User registered sucessfully", token, refresh });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
 
 const userLogin = async (req, res) => {
   try {
