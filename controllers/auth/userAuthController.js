@@ -7,6 +7,7 @@ import {
   createToken,
   refreshToken,
   verifyRefreshToken,
+  verifyToken,
 } from "../../utils/jwtTokens.js";
 import {
   setAccessCookie,
@@ -112,7 +113,6 @@ const refreshTokenValidate = async (req, res) => {
     const authHeader = req.headers.authorization;
     const oldRefreshToken = authHeader && authHeader.split(" ")[1]; // Renamed to oldRefreshToken
 
-
     const clientIP = req.clientIp;
     const refreshTokenVerify = verifyRefreshToken(oldRefreshToken, clientIP);
     if (!refreshTokenVerify) {
@@ -124,62 +124,69 @@ const refreshTokenValidate = async (req, res) => {
 
     const user = await userModel.findById(refreshTokenVerify.id);
 
-    if(!user){
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token",
       });
     }
-    if(user.refreshToken !== oldRefreshToken){
+    if (user.refreshToken !== oldRefreshToken) {
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token",
       });
     }
-    
-  
-    
+
     const newAccessToken = createToken(refreshTokenVerify.id);
 
     res.json({
       success: true,
       message: "Refresh token was valid, new access token was generated",
-      accessToken:newAccessToken,
-      user
-    })
-
-
+      accessToken: newAccessToken,
+      user,
+    });
   } catch (error) {
     return res.status(401).json({
-      success: false, 
-      message: error.message || "Invalid refresh token"
+      success: false,
+      message: error.message || "Invalid refresh token",
     });
   }
 };
 
 const userLogout = async (req, res) => {
   try {
-    const refreshTokenCookie = req.cookies.refreshToken;
-    if (!refreshTokenCookie) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "No refresh token found",
+        message: "User not authenticated, please login",
       });
     }
-    const clientIP = req.clientIp;
-    const refreshTokenVerify = verifyRefreshToken(refreshTokenCookie, clientIP);
-    if (!refreshTokenVerify) {
+
+    const varifyToken = verifyToken(authHeader);
+    if (!varifyToken) {
       return res.status(401).json({
         success: false,
-        message: "Invalid refresh token",
+        message: "Invalid or expired token",
       });
     }
-    // Find user by refresh token and clear it
-    await userModel.updateOne(
-      { refreshToken: refreshTokenCookie },
-      { refreshToken: "null" }
-    );
-    clearAuthCookies(res);
+
+    const user = await userModel.findById(varifyToken.id);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+    user.refreshToken = "null";
+    await user.save();
+
+    // Destroy access token by sending null
+    res.setHeader("Authorization", "null");
+
+    // Destroy refresh token by sending null
+    res.setHeader("Refresh-Token", "null");
+
     res.json({
       success: true,
       message: "Logout successful",
