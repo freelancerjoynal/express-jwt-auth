@@ -77,6 +77,12 @@ const userLogin = async (req, res) => {
     // Generate JWT token
     const token = createToken(exists._id);
     const clientIP = req.clientIp;
+    
+    const refresh = refreshToken(exists._id, clientIP);
+    exists.refreshToken = refresh;
+    await exists.save();
+    setAccessCookie(res, token);
+    setRefreshCookie(res, refresh);
 
     res.json({
       success: true,
