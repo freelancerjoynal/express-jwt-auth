@@ -42,10 +42,15 @@ const userRegister = async (req, res) => {
 
     // res.json({ success: true, message: "User registered sucessfully" })
     const token = createToken(user._id);
-    setAccessCookie(res, token);
-    setRefreshCookie(res, refresh);
 
-    res.json({ success: true, message: "User registered sucessfully" });
+
+    res.json({
+      success: true, 
+      message: "User registered sucessfully",
+      accessToken: token,
+      refreshToken: refresh,
+
+     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
