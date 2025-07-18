@@ -19,7 +19,7 @@ app.use(requestIp.mw())
 
 //API Routes
 app.use('/api', userAuthRouter);
-app.use('/api/user', userRoutes);
+app.use('/api/', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World')

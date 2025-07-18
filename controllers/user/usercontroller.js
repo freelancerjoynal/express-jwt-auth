@@ -1,3 +1,5 @@
+import userModel from "../../models/userModel.js";
+
 const userData = async (req, res) => {
   try {
     const tokenuser = res.locals.tokenuser;
