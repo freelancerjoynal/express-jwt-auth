@@ -11,23 +11,21 @@ const userAuthMiddleware = async (req, res, next) => {
         message: "User not authenticated, please login",
       });
     }
-    const varifyToken = verifyToken(authHeader);
-    if (!varifyToken) {
+    const decodedToken = verifyToken(authHeader);
+    if (!decodedToken) {
       return res.status(401).json({
         success: false,
         message: "Invalid or expired token",
       });
     }
 
-    req.tokenuser = varifyToken;
+    req.tokenuser = decodedToken;
     // Make verified token available for subsequent responses
-    res.locals.tokenuser = varifyToken;
-    // res.json({
-    //   success: true,
-    //   message: "User authenticated successfully",
-    //   user: varifyToken
-    // });
+    res.locals.tokenuser = decodedToken;
     next();
+
+
+    
   } catch (error) {
     res.status(401).json({
       success: false,
